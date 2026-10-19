@@ -204,8 +204,8 @@ def extract_fallback_heuristics(text: str) -> Dict[str, Any]:
             data["vendor"] = line[:50]
             break
 
-    # Look for totals
-    total_match = re.search(r"(?:total|grand\s+total|amount\s+payable|balance\s+due)[:\s]*(?:[^\d\n]*)([\d,]+\.?\d*)", text, re.IGNORECASE)
+    # Look for totals (use word boundary so 'subtotal' doesn't match as 'total')
+    total_match = re.search(r"(?:grand\s+total|amount\s+payable|balance\s+due|\btotal)[:\s]*(?:[^\d\n]*)([\d,]+\.?\d*)", text, re.IGNORECASE)
     if total_match:
         data["total"] = clean_number(total_match.group(1))
 
@@ -280,8 +280,12 @@ Invoice document:
             parsed_json = json.loads(content)
 
     except Exception as e:
-        logger.warning(f"Ollama extraction failed or returned invalid JSON: {e}")
-        warning = f"Ollama model parsing encountered an error ({e}). Using intelligent heuristic fallback."
+        logger.warning("Local Ollama inference failed or returned invalid JSON structure.")
+        warning = (
+            "Local Ollama model parsing was unavailable or encountered an error. "
+            "InvoiceMate safely activated intelligent pattern-matching heuristics as a fallback. "
+            "Please review the extracted values below before saving."
+        )
 
     # Baseline with heuristic fallback
     fallback_data = extract_fallback_heuristics(truncated_text)
